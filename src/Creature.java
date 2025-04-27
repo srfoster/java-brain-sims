@@ -17,24 +17,24 @@ public class Creature {
     public static int REPRODUCTIVE_AGE = 10;
 
     private static int INPUT_SIZE = 4; // dx, dy to food, dx, dy to mate, health
-    private static int HIDDEN_SIZE = 4;
-    private static int HIDDEN_LAYERS = 0;
+    private static int HIDDEN_SIZE = 6;
+    private static int HIDDEN_LAYERS = 2;
     private static int OUTPUT_SIZE = 2;
     
-    public static int MATING_RADIUS = 1000;
+    public static int MATING_RADIUS = 10;
     
     public static boolean KILL_NON_MOVERS = true; 
 
     public static double CHANCE_OF_MUTATED_CHILD = 1; 
     public static double PERCENT_OF_GENES_TO_MUTATE_AT_BIRTH = 1; // mutation chance per gene
-    public static double BIRTH_MUTATION_STRENGTH_MIN = 1;
-    public static double BIRTH_MUTATION_STRENGTH_MAX = 2;
+    public static double BIRTH_MUTATION_STRENGTH_MIN = 4;
+    public static double BIRTH_MUTATION_STRENGTH_MAX = 10;
     
     public static double SPONTANEOUS_MUTATION_RATE = 0; // Chance per creature per timestep
     public static double PERCENT_OF_GENES_TO_SPONTANEOUSLY_MUTATE = 0.25; 
     public static double NO_MUTATION_AFTER_STEP = 10000; 
 
-    public static int PUNISHMENT_FOR_FAILURE = 10; //Fraction of health to leave if it moves away from nearest food
+    public static int PUNISHMENT_FOR_FAILURE = 15; //Fraction of health to leave if it moves away from nearest food
     
     public static double MATE_AWARENESS = 1; //0 or 1 please
     
@@ -74,12 +74,20 @@ public class Creature {
         }
     }
     
+    public void makePoison(boolean b) {
+    	if(b)
+    		this.gender = Gender.MALE;
+    	else
+    		this.gender = Gender.FEMALE;
+    }
+    
     public void setNearestFood(Creature food) {
         this.nearestFood = food;
     }
 
     public void setNearestMate(Creature mate) {
-        this.nearestMate = mate;
+       // System.out.println(mate);
+    	this.nearestMate = mate;
     }
 
     public Creature getNearestFood() {
@@ -125,8 +133,14 @@ public class Creature {
     public void eat(Creature f) {
        // timesEaten++;
        // health += ON_EAT_HEALTH;
-       if(f==nearestFood)
+    	
+    	//OOPS they don't know what kind of food it is...
+       if(f==nearestFood && !f.isPoison())
     	   health *= 2;
+    }
+    
+    public boolean isPoison() {
+    	return this.gender == Gender.MALE;
     }
 
     public boolean isDead() {
@@ -143,9 +157,14 @@ public class Creature {
         this.x = Math.max(-(simWidth / 2), Math.min(simWidth / 2 - 1, this.x));
         this.y = Math.max(-(simHeight / 2), Math.min(simHeight / 2 - 1, this.y));
     }
+    
+    
 
     public void step(Creature nearestFood, Creature nearestMate, int simWidth, int simHeight) {
         if (isFood || brain == null) return;
+        
+        if(stepsAlive > 50)
+        	this.printGeneticCode();
 
         stepsAlive++;
         health -= HEALTH_LOSS_PER_TICK;
@@ -161,10 +180,12 @@ public class Creature {
         double stuckInput = didMoveLastTurn ? 0.0 : 1.0;
 
         double[] inputs = new double[]{
-            (dxFood + 1)/2, 
+            (dxFood+1)/2, 
             (dyFood+1)/2, 
-            ((dxMate+1)/2)*MATE_AWARENESS, 
-            ((dyMate+1)/2)*MATE_AWARENESS//, normHealth, stuckInput
+            nearestFood.isPoison() ? -1.0 : 1.0,
+            0.0
+            //((dxMate+1)/2)*MATE_AWARENESS, 
+            //((dyMate+1)/2)*MATE_AWARENESS//, normHealth, stuckInput
             //dxFood, dyFood, 0, 0, normHealth, stuckInput
         };
 
@@ -202,8 +223,6 @@ public class Creature {
         
         if (nearestFood != null) {
             moveTowardFoodAttempts++;
-            
-            
 
             int foodDx = nearestFood.x - x;
             int foodDy = nearestFood.y - y;
@@ -211,12 +230,36 @@ public class Creature {
             // If moving closer to food
             boolean movingTowardFood = (Integer.signum(foodDx) == dx)&& (Integer.signum(foodDy) == dy);
 
-            if (movingTowardFood) {
+            if (movingTowardFood && !nearestFood.isPoison()) {
                 moveTowardFoodSuccesses++;
                 health += 1;
-            } else {
-            	health = health / PUNISHMENT_FOR_FAILURE;
             }
+            else if (movingTowardFood && nearestFood.isPoison()) {
+            	health = health / (PUNISHMENT_FOR_FAILURE * 2);
+
+            } else {
+            	health = health / (PUNISHMENT_FOR_FAILURE / 2);
+            }
+        }
+        
+        //System.out.println(nearestMate);
+
+        if (nearestMate != null) {
+            int mateDx = nearestMate.x - x;
+            int mateDy = nearestMate.y - y;
+
+            // If moving closer to food
+            boolean movingTowardMate = (Integer.signum(mateDx) == dx)
+            		&& (Integer.signum(mateDy) == dy);
+
+            if (movingTowardMate) {
+            	//if(random.nextDouble() < 0.01)
+               //   health = 0;
+            } else {
+            	//if(random.nextDouble() < 0.001)
+            	//	health -= 1;
+            }
+           // health = health / PUNISHMENT_FOR_FAILURE;
         }
         
         //if(!isFood)
@@ -243,7 +286,13 @@ public class Creature {
 
     }
 
-    private double normalize(int diff, int bound) {
+    private void printGeneticCode() {
+    	for(double gene : this.getGeneticCode())
+            System.out.print(gene + ",");
+    	System.out.println();
+	}
+
+	private double normalize(int diff, int bound) {
         return (double) diff / (bound / 2.0);
     }
     
@@ -275,7 +324,8 @@ public class Creature {
     }
 
     public static Creature mate(Creature a, Creature b) {
-        double[] genesA = a.getGeneticCode();
+        //System.out.println("Mate");
+    	double[] genesA = a.getGeneticCode();
         double[] genesB = b.getGeneticCode();
         double[] childGenes = new double[genesA.length];
 
@@ -290,6 +340,10 @@ public class Creature {
         }
 
         Creature child = fromGeneticCode(childGenes, b.x, b.y);
+        //Lots of possible strategies here...
+      //  child.health = a.health * 7; //a.health * 100; //a.health/2 + b.health/2;
+      //  a.health /= 2;
+      //  b.health /= 2;
         child.gender = random.nextBoolean() ? Gender.MALE : Gender.FEMALE;
 
         /*

@@ -14,6 +14,10 @@ import java.util.*;
 2.50608378695712,0.20051499590890642,-1.4541780531005808,-0.6014627010636199,2.9074509701252755,-1.1266278142805497,
 2.6167879310295934,-0.4526209819760326,-1.245985519546042,-0.3971314616684611,2.681904112718101,-0.758319464053476,
 
+
+
+-17.548393026066606,-9.446891222207848,5.3771476672839436,-0.2708329470723774,-12.811789080828813,-3.0374109368938855,16.173257100142667,9.253938231544112,-22.115836340040644,0.9304350064249696,1.4152850346598547,-9.378350702528067,16.83822388224059,-6.19465495598678,-25.644334857326562,5.488609847648275,1.4026597119332944,0.8198095871022526,8.289661054373358,-3.008311539145966,-22.627947807150722,6.196186776035061,9.807833874709763,3.745174032078239,7.539024583210647,-8.456314562449055,-6.6088129637044455,-3.6783009462692107,1.4081751140658456,-1.6902844421665097,-11.739672778201042,-6.0147719539256155,-1.410174066391375,4.785787116217691,-10.53591884847415,-2.9167971091186007,-4.934803043731565,-1.1816853927102313,8.824850097397842,1.4834689874544105,7.181219013692424,15.521291367023299,2.2220601888855898,8.16129419223545,
+
  */
 
 public class Driver {
@@ -22,9 +26,10 @@ public class Driver {
     public static int INITIAL_BRAINFUL = 500;
     public static int INITIAL_FOOD = 10;
     public static int FOOD_PER_STEP = 10;
+    public static double CHANCE_OF_POISON_PER_STEP = 0.1;
     public static int MAX_TOTAL_POPULATION = 700;
     public static int MAX_TOTAL_FOOD = 400;
-    public static int OVERLAP_DISTRIBUTION = 2;
+    public static int OVERLAP_DISTRIBUTION = 1;
     public static int MARGIN = 30;
     public static int TIMES_TO_EAT_BEFORE_MATING = 5;
     public static int RANDOM_MUTANTS_PER_STEP = 0; 
@@ -86,7 +91,7 @@ public class Driver {
                     c.setNearestMate(nearestMate);
 
                     
-                    c.step(nearestFood, null, SIM_WIDTH, SIM_HEIGHT);
+                    c.step(nearestFood, nearestMate, SIM_WIDTH, SIM_HEIGHT);
                     c.maybeMutate();
                 }
 
@@ -100,13 +105,15 @@ public class Driver {
                     }
                 }
                 
-                for (int i = 0; i + 1 < brainful.size(); i += 2) {
+                for (int i = 0; i < brainful.size(); i += 1) {
                     Creature a = brainful.get(i);
                     Creature b = a.getNearestMate();
-                    if(a.gender == Creature.Gender.MALE) {
-                        int numKids = random.nextInt(Creature.MIN_CHILDREN, Creature.MAX_CHILDREN);
+                    if(a.gender == Creature.Gender.MALE && b != null && a.health > 0 && b.health > 0) {
+                        int numKids = //a.health*10;
+                        		random.nextInt(Creature.MIN_CHILDREN, Creature.MAX_CHILDREN);
 
                         for (int k = 0; k < numKids; k++) {
+                        	
                             newGeneration.add(Creature.mate(a, b));
                         }
                     }
@@ -188,12 +195,28 @@ public class Driver {
                 int foodToSpawn = Math.min(FOOD_PER_STEP, MAX_TOTAL_FOOD - currentFoodCount);
 
                 for (int i = 0; i < foodToSpawn; i++) {
-                    survivors.add(Creature.randomCreature(
-                    		-(SIM_WIDTH / 2)+MARGIN, 
-                    		(SIM_WIDTH / 2) - MARGIN,
-                            -(SIM_HEIGHT / 2) + MARGIN, 
-                            (SIM_HEIGHT / 2) - MARGIN, true));
+                	Creature f;
+                	
+                	if(random.nextDouble() < CHANCE_OF_POISON_PER_STEP) {
+                		f = Creature.randomCreature(
+                        		-(SIM_WIDTH / 2)+ (MARGIN+10), 
+                        		(SIM_WIDTH / 2) - (MARGIN+10),
+                                -(SIM_HEIGHT / 2) + (MARGIN+10), 
+                                (SIM_HEIGHT / 2) - (MARGIN+10), true);
+                		f.makePoison(true);
+                	} else {
+                		f = Creature.randomCreature(
+                        		-(SIM_WIDTH / 2)+MARGIN, 
+                        		(SIM_WIDTH / 2) - MARGIN,
+                                -(SIM_HEIGHT / 2) + MARGIN, 
+                                (SIM_HEIGHT / 2) - MARGIN, true);
+                		f.makePoison(false);
+                	}
+                	
+                    survivors.add(f);
                 }
+                
+                
                 
              // Spawn random mutants
                 for (int i = 0; i < RANDOM_MUTANTS_PER_STEP; i++) {
