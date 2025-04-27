@@ -27,7 +27,7 @@ public class Driver {
     public static int OVERLAP_DISTRIBUTION = 2;
     public static int MARGIN = 30;
     public static int TIMES_TO_EAT_BEFORE_MATING = 5;
-    public static final int RANDOM_MUTANTS_PER_STEP = 0; 
+    public static int RANDOM_MUTANTS_PER_STEP = 0; 
 
     private static final Random random = new Random();
 
@@ -77,12 +77,13 @@ public class Driver {
 
                 // Step all brainful creatures
                 for (Creature c : brainful) {
-                    Creature nearestFood = findNearest(c, food);
+                    Creature nearestFood = findNearestFood(c, food);
                     c.setNearestFood(nearestFood);
                     
                     
                     //Creature farthestMate = findFarthest(c, brainful.stream().filter(o -> o != c).toList());
-                    //Creature fittestMate = findFittest(c, brainful.stream().filter(o -> o != c).toList());
+                    Creature nearestMate = findNearestMate(c, brainful.stream().filter(o -> o != c).toList());
+                    c.setNearestMate(nearestMate);
 
                     
                     c.step(nearestFood, null, SIM_WIDTH, SIM_HEIGHT);
@@ -98,12 +99,36 @@ public class Driver {
                         }
                     }
                 }
+                
+                for (int i = 0; i + 1 < brainful.size(); i += 2) {
+                    Creature a = brainful.get(i);
+                    Creature b = a.getNearestMate();
+                    if(a.gender == Creature.Gender.MALE) {
+                        int numKids = random.nextInt(Creature.MIN_CHILDREN, Creature.MAX_CHILDREN);
+
+                        for (int k = 0; k < numKids; k++) {
+                            newGeneration.add(Creature.mate(a, b));
+                        }
+                    }
+                }
 
                 //Only elites mate
-                Collections.shuffle(elites, random);
-                for (int i = 0; i + 1 < elites.size(); i += 2) {
-                    Creature a = elites.get(i);
-                    Creature b = elites.get(i + 1);
+                //Collections.shuffle(elites, random);
+                /*
+                for (int i = 0; i + 1 < brainful.size(); i += 2) {
+                    Creature a = brainful.get(i);
+                    Creature b = brainful.get(i + 1);
+                    
+                    // Ensure a = male, b = female
+                    if (a.gender == Creature.Gender.FEMALE && b.gender == Creature.Gender.MALE) {
+                        Creature temp = a;
+                        a = b;
+                        b = temp;
+                    }
+
+                    if (a.gender != Creature.Gender.MALE || b.gender != Creature.Gender.FEMALE) {
+                        continue; // skip invalid pairs (optional: you could retry instead)
+                    }
 
                     //int averageEats = (a.getTimesEaten() + b.getTimesEaten()) / 2;
                     //int bonusChildren = averageEats;
@@ -113,7 +138,7 @@ public class Driver {
                     for (int k = 0; k < numKids; k++) {
                         newGeneration.add(Creature.mate(a, b));
                     }
-                }
+                }*/
                 
                 // Mating (only if both are mature)
                 //if(gen % 10 == 0) {
@@ -222,12 +247,25 @@ public class Driver {
         return result;
     }
 
-    private static Creature findNearest(Creature seeker, List<Creature> targets) {
+    private static Creature findNearestFood(Creature seeker, List<Creature> targets) {
         Creature closest = null;
         double bestDist = Double.MAX_VALUE;
         for (Creature t : targets) {
             double d = Math.pow(t.x - seeker.x, 2) + Math.pow(t.y - seeker.y, 2);
             if (d < bestDist) {
+                bestDist = d;
+                closest = t;
+            }
+        }
+        return closest;
+    }
+    
+    private static Creature findNearestMate(Creature seeker, List<Creature> targets) {
+        Creature closest = null;
+        double bestDist = Double.MAX_VALUE;
+        for (Creature t : targets) {
+            double d = Math.pow(t.x - seeker.x, 2) + Math.pow(t.y - seeker.y, 2);
+            if (d < bestDist && t.gender != seeker.gender) {
                 bestDist = d;
                 closest = t;
             }

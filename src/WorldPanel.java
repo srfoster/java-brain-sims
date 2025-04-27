@@ -35,7 +35,11 @@ public class WorldPanel extends JPanel {
             int py = (c.y + simHeight / 2) * scale;
 
             g.setColor(c.isFood ? Color.BLACK : colorFromGenes(c));
-            g.fillOval(px, py, scale, scale);
+            if (c.gender == Creature.Gender.MALE) {
+                g.fillRect(px, py, scale, scale); // square
+            } else {
+                g.fillOval(px, py, scale, scale); // circle
+            }
             
             // Draw a border if this is an elite creature
             if (c.health > 100) {

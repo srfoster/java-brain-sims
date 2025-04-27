@@ -12,11 +12,11 @@ public class Creature {
     public static int FULL_HEALTH = 20;
     public static int ON_EAT_HEALTH = 2;
     public static int HEALTH_LOSS_PER_TICK = 1;
-    public static int MAX_CHILDREN = 20;//20;
-    public static int MIN_CHILDREN = 10;
+    public static int MAX_CHILDREN = 40;//20;
+    public static int MIN_CHILDREN = 20;
     public static int REPRODUCTIVE_AGE = 10;
 
-    private static int INPUT_SIZE = 2; // dx, dy to food, dx, dy to mate, health
+    private static int INPUT_SIZE = 4; // dx, dy to food, dx, dy to mate, health
     private static int HIDDEN_SIZE = 4;
     private static int HIDDEN_LAYERS = 0;
     private static int OUTPUT_SIZE = 2;
@@ -36,10 +36,15 @@ public class Creature {
 
     public static int PUNISHMENT_FOR_FAILURE = 10; //Fraction of health to leave if it moves away from nearest food
     
-    public static double MATE_AWARENESS = 0; //0 or 1 please
+    public static double MATE_AWARENESS = 1; //0 or 1 please
     
 
-	
+    public enum Gender { MALE, FEMALE }
+
+    public Gender gender;
+    
+    public Creature lastMate;
+
     protected int x, y;
     protected boolean isFood;
     protected int health;
@@ -61,6 +66,12 @@ public class Creature {
         this.brain = brain;
         this.isFood = isFood;
         this.health = isFood ? 0 : FULL_HEALTH;
+        
+        
+        if(Gender.FEMALE == this.gender) {
+        	//With extra layers, how do they breed?
+        //	HIDDEN_LAYERS = 10;
+        }
     }
     
     public void setNearestFood(Creature food) {
@@ -80,7 +91,8 @@ public class Creature {
     }
 
     public static Creature randomCreature(int x_min, int x_max, int y_min, int y_max, boolean isFood) {
-        BasicNetwork net = null;
+
+    	BasicNetwork net = null;
         if (!isFood) {
             net = new BasicNetwork();
             net.addLayer(new BasicLayer(null, true, INPUT_SIZE));
@@ -97,6 +109,9 @@ public class Creature {
 
         c.prevX = c.x;
         c.prevY = c.y;
+        
+    	c.gender = random.nextBoolean() ? Gender.MALE : Gender.FEMALE;
+
 
         return c;
     }
@@ -148,8 +163,8 @@ public class Creature {
         double[] inputs = new double[]{
             (dxFood + 1)/2, 
             (dyFood+1)/2, 
-          //  ((dxMate+1)/2)*MATE_AWARENESS, 
-          //  ((dyMate+1)/2)*MATE_AWARENESS, normHealth, stuckInput
+            ((dxMate+1)/2)*MATE_AWARENESS, 
+            ((dyMate+1)/2)*MATE_AWARENESS//, normHealth, stuckInput
             //dxFood, dyFood, 0, 0, normHealth, stuckInput
         };
 
@@ -158,8 +173,8 @@ public class Creature {
         // Determine movement
         
         //Hack their brains to insert the correct answer
-        //outputs[0] = dxFood;
-        //outputs[1] = dyFood;
+       // outputs[0] = dxMate;
+       // outputs[1] = dyMate;
 
         int dx = 0;
         if(outputs[0]>0.6666) 
@@ -220,7 +235,8 @@ public class Creature {
         //    return;
         //}
         
-        move(dx, dy, simWidth, simHeight);
+       // if(this.gender != Gender.FEMALE)
+        	move(dx, dy, simWidth, simHeight);
 
         prevX = x;
         prevY = y;
@@ -273,8 +289,10 @@ public class Creature {
             }
         }
 
-        Creature child = fromGeneticCode(childGenes, a.x, a.y);
-        
+        Creature child = fromGeneticCode(childGenes, b.x, b.y);
+        child.gender = random.nextBoolean() ? Gender.MALE : Gender.FEMALE;
+
+        /*
         if(random.nextBoolean()) {
     	  child.x = a.x;
           child.y = a.y;
@@ -282,6 +300,7 @@ public class Creature {
       	  child.x = b.x;
           child.y = b.y;
         }
+        */
       
         return child;
     }
